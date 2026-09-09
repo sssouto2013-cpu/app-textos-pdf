@@ -143,7 +143,7 @@
 
   <p>Escolha a pasta onde estão:</p>
   <ul>
-    <li>um arquivo <strong>.txt</strong> com palavras‑chave (um termo por linha)</li>
+    <li>um arquivo <strong>.txt</strong> com palavras‑chave (um termo por linha ou separados por “;”)</li>
     <li>vários arquivos <strong>.pdf</strong> onde será feita a busca</li>
   </ul>
 
@@ -190,29 +190,23 @@
   <div id="results" class="results"></div>
 </div>
 
-<!-- PDF.js (para leitura de texto em PDFs) -->
+<!-- PDF.js -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"></script>
 
-<!-- Tesseract.js (para OCR em PDFs escaneados) -->
+<!-- Tesseract.js -->
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
 
 <script>
 let folderHandle = null;
 let keywords = [];
 let usedKeywords = [];
-let pdfFiles = []; // { name, handle, text }
+let pdfFiles = [];
 let currentTest = { active: false, keyword: "", pdfIds: [] };
 
-/* MODO ESCURO */
-const themeToggle = document.getElementById("themeToggle");
-if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
-  document.body.dataset.theme = "dark";
-}
-themeToggle.onclick = () => {
-  const current = document.body.dataset.theme;
-  document.body.dataset.theme = current === "dark" ? "light" : "dark";
-};
+const pdfjsLib = window['pdfjsLib'];
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
 /* ELEMENTOS */
 const chooseFolderBtn = document.getElementById("chooseFolderBtn");
@@ -229,9 +223,15 @@ const endTestBtn = document.getElementById("endTestBtn");
 const testInfoEl = document.getElementById("testInfo");
 const resultsEl = document.getElementById("results");
 
-/* CONFIG PDF.js */
-const pdfjsLib = window['pdfjsLib'];
-pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+/* MODO ESCURO */
+const themeToggle = document.getElementById("themeToggle");
+if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
+  document.body.dataset.theme = "dark";
+}
+themeToggle.onclick = () => {
+  document.body.dataset.theme =
+    document.body.dataset.theme === "dark" ? "light" : "dark";
+};
 
 /* ESCOLHER PASTA */
 chooseFolderBtn.onclick = async () => {
@@ -243,7 +243,7 @@ chooseFolderBtn.onclick = async () => {
   }
 };
 
-/* CARREGAR TXT DE PALAVRAS-CHAVE (UM TERMO POR LINHA) */
+/* CARREGAR TXT DE PALAVRAS-CHAVE */
 loadKeywordsBtn.onclick = async () => {
   if (!folderHandle) {
     alert("Escolha a pasta primeiro.");
@@ -252,7 +252,7 @@ loadKeywordsBtn.onclick = async () => {
 
   const perm = await folderHandle.requestPermission({ mode: "read" });
   if (perm !== "granted") {
-    alert("Permissão negada para ler a pasta.");
+    alert("Permissão negada.");
     return;
   }
 
@@ -261,12 +261,12 @@ loadKeywordsBtn.onclick = async () => {
   for await (const entry of folderHandle.values()) {
     if (entry.kind === "file" && entry.name.toLowerCase().endsWith(".txt")) {
       txtHandle = entry;
-      break; // pega o primeiro TXT encontrado; se quiser, depois dá pra escolher
+      break;
     }
   }
 
   if (!txtHandle) {
-    alert("Nenhum arquivo .txt encontrado na pasta.");
+    alert("Nenhum TXT encontrado.");
     return;
   }
 
@@ -276,15 +276,28 @@ loadKeywordsBtn.onclick = async () => {
   keywords = raw
     .split("\n")
     .map(l => l.trim())
-    .filter(l => l.length > 0);
+    .filter(l => l.length > 0)
+    .flatMap(l => {
+      l = l.replace(/^#PALAVRAS:/i, "")
+           .replace(/^#TITULO:/i, "")
+           .trim();
+
+      if (l.includes(";")) {
+        return l.split(";").map(t => t.trim()).filter(t => t.length > 0);
+      }
+
+      return [l];
+    });
 
   usedKeywords = [];
 
-  keywordsInfoEl.textContent = `Arquivo TXT: ${txtHandle.name} — ${keywords.length} termos carregados.`;
+  keywordsInfoEl.textContent =
+    `Arquivo TXT: ${txtHandle.name} — ${keywords.length} termos carregados.`;
+
   renderKeywords();
 };
 
-/* RENDERIZAR LISTA DE PALAVRAS-CHAVE */
+/* RENDERIZAR PALAVRAS-CHAVE */
 function renderKeywords() {
   keywordsListEl.innerHTML = "";
   keywords.forEach((kw, idx) => {
@@ -295,7 +308,7 @@ function renderKeywords() {
   });
 }
 
-/* CARREGAR PDFs DA PASTA */
+/* CARREGAR PDFs */
 loadPdfsBtn.onclick = async () => {
   if (!folderHandle) {
     alert("Escolha a pasta primeiro.");
@@ -304,7 +317,7 @@ loadPdfsBtn.onclick = async () => {
 
   const perm = await folderHandle.requestPermission({ mode: "read" });
   if (perm !== "granted") {
-    alert("Permissão negada para ler a pasta.");
+    alert("Permissão negada.");
     return;
   }
 
@@ -316,14 +329,10 @@ loadPdfsBtn.onclick = async () => {
     }
   }
 
-  if (pdfFiles.length === 0) {
-    alert("Nenhum arquivo PDF encontrado na pasta.");
-  }
-
   renderPdfsSelectList();
 };
 
-/* RENDERIZAR LISTA DE PDFs COM CHECKBOX */
+/* RENDERIZAR LISTA DE PDFs */
 function renderPdfsSelectList() {
   pdfsSelectListEl.innerHTML = "";
 
@@ -338,11 +347,9 @@ function renderPdfsSelectList() {
   });
 }
 
-/* EXTRAIR TEXTO DE PDF (HÍBRIDO: PDF.js + OCR) */
+/* EXTRAIR TEXTO DE PDF (HÍBRIDO) */
 async function extrairTextoDePdf(pdfObj) {
-  if (pdfObj.text !== null) {
-    return pdfObj.text;
-  }
+  if (pdfObj.text !== null) return pdfObj.text;
 
   const file = await pdfObj.handle.getFile();
   const arrayBuffer = await file.arrayBuffer();
@@ -375,7 +382,7 @@ async function extrairTextoDePdf(pdfObj) {
   return textoFinal;
 }
 
-/* OCR COM TESSERACT (APENAS PRIMEIRA PÁGINA PARA PERFORMANCE) */
+/* OCR (primeira página) */
 async function extrairTextoPorOCR(file) {
   try {
     const pdfData = await file.arrayBuffer();
@@ -389,37 +396,29 @@ async function extrairTextoPorOCR(file) {
     canvas.width = viewport.width;
     canvas.height = viewport.height;
 
-    const renderContext = {
-      canvasContext: context,
-      viewport: viewport
-    };
+    await page.render({ canvasContext: context, viewport }).promise;
 
-    await page.render(renderContext).promise;
-
-    const { data: { text } } = await Tesseract.recognize(canvas, 'por', {
-      logger: m => console.log(m)
-    });
+    const { data: { text } } = await Tesseract.recognize(canvas, 'por');
 
     return text;
   } catch (err) {
-    console.error("Erro no OCR:", err);
     return "";
   }
 }
 
-/* ESCOLHER TERMO ALEATÓRIO SEM REPETIR */
+/* SORTEAR TERMO SEM REPETIR */
 startTestBtn.onclick = () => {
   const selectedPdfIds = Array.from(
     pdfsSelectListEl.querySelectorAll("input[type='checkbox']:checked")
   ).map(cb => Number(cb.value));
 
   if (selectedPdfIds.length === 0) {
-    alert("Selecione pelo menos um PDF.");
+    alert("Selecione PDFs.");
     return;
   }
 
   if (keywords.length === 0) {
-    alert("Carregue primeiro o arquivo TXT de palavras‑chave.");
+    alert("Carregue o TXT primeiro.");
     return;
   }
 
@@ -430,10 +429,10 @@ startTestBtn.onclick = () => {
   if (disponiveis.length === 0) {
     usedKeywords = [];
     disponiveis = [...keywords];
-    termoEscolhido = disponiveis[Math.floor(Math.random() * disponiveis.length)];
-  } else {
-    termoEscolhido = disponiveis[Math.floor(Math.random() * disponiveis.length)];
   }
+
+  termoEscolhido =
+    disponiveis[Math.floor(Math.random() * disponiveis.length)];
 
   usedKeywords.push(termoEscolhido);
 
@@ -452,7 +451,7 @@ startTestBtn.onclick = () => {
   renderKeywords();
 };
 
-/* EXTRAIR TRECHOS DE TEXTO ONDE O TERMO APARECE */
+/* EXTRAIR TRECHOS */
 function extrairTrechos(texto, termo) {
   const termoLower = termo.toLowerCase();
   const textoLower = texto.toLowerCase();
@@ -467,16 +466,14 @@ function extrairTrechos(texto, termo) {
     const inicio = Math.max(0, idx - 80);
     const fim = Math.min(texto.length, idx + termo.length + 80);
 
-    const trecho = texto.substring(inicio, fim);
-
-    trechos.push(trecho);
+    trechos.push(texto.substring(inicio, fim));
     pos = idx + termo.length;
   }
 
   return trechos;
 }
 
-/* DESTACAR OCORRÊNCIAS */
+/* DESTACAR */
 function highlightOccurrences(text, keywords) {
   let result = text;
   keywords.forEach(kw => {
@@ -487,7 +484,7 @@ function highlightOccurrences(text, keywords) {
   return result;
 }
 
-/* MOSTRAR APENAS TRECHOS ONDE O TERMO APARECE */
+/* MOSTRAR OCORRÊNCIAS */
 showOccurrencesBtn.onclick = async () => {
   if (!currentTest.active) {
     alert("Nenhum teste ativo.");
@@ -495,7 +492,7 @@ showOccurrencesBtn.onclick = async () => {
   }
 
   const termo = currentTest.keyword;
-  resultsEl.innerHTML = "<p>Processando PDFs, aguarde...</p>";
+  resultsEl.innerHTML = "<p>Processando PDFs...</p>";
 
   let totalEncontrados = 0;
   resultsEl.innerHTML = "";
@@ -529,7 +526,7 @@ showOccurrencesBtn.onclick = async () => {
 
   if (totalEncontrados === 0) {
     resultsEl.innerHTML =
-      `<p>Nenhum trecho contém o termo <strong>${termo}</strong> nos PDFs selecionados.</p>`;
+      `<p>Nenhum trecho contém o termo <strong>${termo}</strong>.</p>`;
   }
 };
 
