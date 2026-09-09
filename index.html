@@ -143,7 +143,7 @@
 
   <p>Escolha a pasta onde estão:</p>
   <ul>
-    <li>um arquivo <strong>.txt</strong> com palavras‑chave (um termo por linha ou separados por “;”)</li>
+    <li>um arquivo <strong>.txt</strong> com palavras‑chave</li>
     <li>vários arquivos <strong>.pdf</strong> onde será feita a busca</li>
   </ul>
 
@@ -278,9 +278,12 @@ loadKeywordsBtn.onclick = async () => {
     .map(l => l.trim())
     .filter(l => l.length > 0)
     .flatMap(l => {
-      l = l.replace(/^#PALAVRAS:/i, "")
-           .replace(/^#TITULO:/i, "")
-           .trim();
+
+      if (l.toUpperCase().startsWith("#TITULO:")) {
+        return [];
+      }
+
+      l = l.replace(/^#PALAVRAS:/i, "").trim();
 
       if (l.includes(";")) {
         return l.split(";").map(t => t.trim()).filter(t => t.length > 0);
