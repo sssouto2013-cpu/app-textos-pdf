@@ -2,27 +2,142 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<title>Aplicativo de Teste de Palavras</title>
+<title>Busca em PDFs por palavras-chave</title>
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
 
 <style>
-body {
-    font-family: Arial, sans-serif;
-    margin: 20px;
-}
+  :root {
+    --bg: #eef2f7;
+    --panel: #ffffff;
+    --text: #2c3e50;
+    --accent: #3498db;
+    --accent-hover: #2980b9;
+    --border: #d0d7e2;
+    --highlight: yellow;
+    --shadow: 0 4px 10px #0002;
+  }
 
-/* Seção Mobile azul */
-#mobileSection {
+  [data-theme="dark"] {
+    --bg: #1e1e1e;
+    --panel: #2a2a2a;
+    --text: #e0e0e0;
+    --accent: #5dade2;
+    --accent-hover: #3498db;
+    --border: #444;
+    --highlight: #ffeb3b;
+    --shadow: 0 4px 12px #0005;
+  }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    margin: 0;
+    padding: 20px;
+    background: var(--bg);
+    color: var(--text);
+    transition: background 0.3s, color 0.3s;
+  }
+
+  h1 {
+    text-align: center;
+    margin-bottom: 25px;
+    font-weight: 600;
+    animation: fadeIn 0.6s ease;
+  }
+
+  .panel {
+    background: var(--panel);
+    padding: 20px;
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+    margin-bottom: 25px;
+    animation: fadeIn 0.4s ease;
+  }
+
+  textarea, input[type="text"], select {
+    width: 100%;
+    padding: 12px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    margin-bottom: 12px;
+    background: var(--panel);
+    color: var(--text);
+    transition: 0.3s;
+  }
+
+  button {
+    background: var(--accent);
+    color: white;
+    border: none;
+    padding: 10px 16px;
+    border-radius: 10px;
+    cursor: pointer;
+    margin-top: 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 600;
+    transition: 0.25s;
+  }
+
+  button:hover {
+    background: var(--accent-hover);
+    transform: translateY(-2px);
+  }
+
+  .list, .results {
+    border: 1px solid var(--border);
+    padding: 12px;
+    max-height: 260px;
+    overflow-y: auto;
+    background: var(--panel);
+    border-radius: 10px;
+    animation: fadeIn 0.4s ease;
+  }
+
+  .highlight {
+    background: var(--highlight);
+    font-weight: bold;
+  }
+
+  .text-block {
+    margin-bottom: 15px;
+    border-bottom: 1px dashed var(--border);
+    padding-bottom: 10px;
+  }
+
+  #themeToggle {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: var(--accent);
+    border-radius: 50%;
+    width: 48px;
+    height: 48px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: var(--shadow);
+    cursor: pointer;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* MODO MOBILE AZUL */
+  #mobileSection {
     display: none;
     padding: 16px;
     border-radius: 14px;
     background: #e7f1ff;
     border: 1px solid #bcd4ff;
     margin-bottom: 20px;
-}
+    box-shadow: var(--shadow);
+  }
 
-/* Botões Mobile */
-.mobileButton {
+  .mobileButton {
     display: flex;
     align-items: center;
     gap: 8px;
@@ -33,153 +148,473 @@ body {
     cursor: pointer;
     font-size: 16px;
     margin-bottom: 10px;
-}
-
-/* Botão padrão */
-button {
-    padding: 10px 14px;
-    font-size: 16px;
-    cursor: pointer;
-}
+  }
 </style>
 </head>
 
 <body>
 
 <!-- ========================= -->
-<!-- 📱 SEÇÃO MOBILE NO TOPO   -->
+<!-- 📱 MODO MOBILE NO TOPO ABSOLUTO -->
 <!-- ========================= -->
 <div id="mobileSection">
-    <h2 style="margin-top: 0; display:flex; align-items:center; gap:8px;">
-        <span class="material-icons">smartphone</span>
-        Modo Mobile (Android / iPhone)
-    </h2>
+  <h2 style="margin-top: 0; display:flex; align-items:center; gap:8px;">
+    <span class="material-icons">smartphone</span>
+    Modo Mobile (Android / iPhone)
+  </h2>
 
-    <p>Selecione os arquivos diretamente do OneDrive, Google Drive ou armazenamento local.</p>
+  <p>Selecione os arquivos diretamente do OneDrive, Google Drive ou armazenamento local.</p>
 
-    <!-- Selecionar TXT -->
-    <label for="mobileTxtInput" class="mobileButton">
-        <span class="material-icons">description</span>
-        Selecionar TXT manualmente
-    </label>
-    <input type="file" id="mobileTxtInput" accept=".txt" style="display:none;">
+  <label for="mobileTxtInput" class="mobileButton">
+    <span class="material-icons">description</span>
+    Selecionar TXT manualmente
+  </label>
+  <input type="file" id="mobileTxtInput" accept=".txt" style="display:none;">
 
-    <!-- Selecionar PDFs -->
-    <label for="mobilePdfInput" class="mobileButton">
-        <span class="material-icons">picture_as_pdf</span>
-        Selecionar PDFs manualmente (múltiplos)
-    </label>
-    <input type="file" id="mobilePdfInput" accept="application/pdf" multiple style="display:none;">
+  <label for="mobilePdfInput" class="mobileButton">
+    <span class="material-icons">picture_as_pdf</span>
+    Selecionar PDFs manualmente (múltiplos)
+  </label>
+  <input type="file" id="mobilePdfInput" accept="application/pdf" multiple style="display:none;">
 </div>
 
-<!-- ========================= -->
-<!-- 🖥️ SEÇÃO DESKTOP NORMAL   -->
-<!-- ========================= -->
-<h2>Pasta de Trabalho (Modo Desktop)</h2>
-<button id="chooseFolderButton">Escolher pasta</button>
+<h1>Busca de Palavras em PDFs</h1>
 
-<hr>
+<button id="themeToggle">
+  <span class="material-icons">dark_mode</span>
+</button>
 
-<h2>Iniciar Teste</h2>
-<button id="startTestButton">Iniciar</button>
+<div class="panel">
+  <h2><span class="material-icons">folder_open</span> Pasta de trabalho</h2>
 
-<div id="output"></div>
+  <p>Escolha a pasta onde estão:</p>
+  <ul>
+    <li>um arquivo <strong>.txt</strong> com palavras‑chave</li>
+    <li>vários arquivos <strong>.pdf</strong> onde será feita a busca</li>
+  </ul>
+
+  <button id="chooseFolderBtn">
+    <span class="material-icons">folder</span> Escolher pasta
+  </button>
+</div>
+
+<div class="panel">
+  <h2><span class="material-icons">description</span> Palavras‑chave (arquivo TXT)</h2>
+
+  <button id="loadKeywordsBtn">
+    <span class="material-icons">text_snippet</span> Carregar TXT de palavras‑chave
+  </button>
+
+  <p id="keywordsInfo">Nenhum arquivo TXT carregado.</p>
+
+  <h3>Palavras‑chave carregadas</h3>
+  <div id="keywordsList" class="list"></div>
+</div>
+
+<div class="panel">
+  <h2><span class="material-icons">picture_as_pdf</span> PDFs para busca</h2>
+
+  <button id="loadPdfsBtn">
+    <span class="material-icons">download</span> Carregar PDFs da pasta
+  </button>
+
+  <h3>Escolher PDFs</h3>
+  <div id="pdfsSelectList" class="list"></div>
+</div>
+
+<div class="panel">
+  <h2><span class="material-icons">search</span> Teste</h2>
+
+  <button id="startTestBtn"><span class="material-icons">play_arrow</span> Sortear termo e iniciar teste</button>
+  <button id="showOccurrencesBtn" disabled><span class="material-icons">visibility</span> Mostrar ocorrências</button>
+  <button id="endTestBtn" disabled><span class="material-icons">stop</span> Encerrar teste</button>
+
+  <h3>Resumo do teste</h3>
+  <div id="testInfo" class="list"></div>
+
+  <h3>Resultados</h3>
+  <div id="results" class="results"></div>
+</div>
+
+<!-- PDF.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"></script>
+
+<!-- Tesseract.js -->
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
 
 <script>
-// Detecta Android ou iPhone
-const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-
-// Se for mobile → mostra seção azul e oculta "Escolher pasta"
-if (isMobile) {
-    document.getElementById("mobileSection").style.display = "block";
-
-    const folderButton = document.getElementById("chooseFolderButton");
-    if (folderButton) folderButton.style.display = "none";
+/* DETECÇÃO MOBILE REAL */
+function detectMobile() {
+  if (navigator.maxTouchPoints > 1 && window.innerWidth < 900) return true;
+  const ua = navigator.userAgent || navigator.vendor || window.opera;
+  return /android|iphone|ipad|ipod/i.test(ua);
 }
 
-// Variáveis globais
-window.loadedTxtContent = "";
-window.loadedPdfFiles = [];
+const isMobile = detectMobile();
 
-// Carregar TXT manual
-document.getElementById("mobileTxtInput").addEventListener("change", function(event) {
-    const file = event.target.files[0];
-    if (!file) return;
+/* MOSTRAR MODO MOBILE */
+if (isMobile) {
+  document.getElementById("mobileSection").style.display = "block";
+  document.getElementById("chooseFolderBtn").style.display = "none";
+}
 
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        window.loadedTxtContent = e.target.result;
-        alert("TXT carregado com sucesso!");
-    };
-    reader.readAsText(file);
+/* VARIÁVEIS */
+let folderHandle = null;
+let keywords = [];
+let usedKeywords = [];
+let pdfFiles = [];
+let currentTest = { active: false, keyword: "", pdfIds: [] };
+
+const pdfjsLib = window['pdfjsLib'];
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+/* ELEMENTOS */
+const chooseFolderBtn = document.getElementById("chooseFolderBtn");
+const loadKeywordsBtn = document.getElementById("loadKeywordsBtn");
+const loadPdfsBtn = document.getElementById("loadPdfsBtn");
+
+const keywordsInfoEl = document.getElementById("keywordsInfo");
+const keywordsListEl = document.getElementById("keywordsList");
+const pdfsSelectListEl = document.getElementById("pdfsSelectList");
+
+const startTestBtn = document.getElementById("startTestBtn");
+const showOccurrencesBtn = document.getElementById("showOccurrencesBtn");
+const endTestBtn = document.getElementById("endTestBtn");
+const testInfoEl = document.getElementById("testInfo");
+const resultsEl = document.getElementById("results");
+
+/* MODO ESCURO */
+const themeToggle = document.getElementById("themeToggle");
+if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
+  document.body.dataset.theme = "dark";
+}
+themeToggle.onclick = () => {
+  document.body.dataset.theme =
+    document.body.dataset.theme === "dark" ? "light" : "dark";
+};
+
+/* MOBILE: CARREGAR TXT */
+document.getElementById("mobileTxtInput").addEventListener("change", async e => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const raw = await file.text();
+  keywords = raw.split("\n").map(l => l.trim()).filter(l => l.length > 0);
+  usedKeywords = [];
+
+  keywordsInfoEl.textContent = `Arquivo TXT carregado — ${keywords.length} termos.`;
+  renderKeywords();
 });
 
-// Carregar PDFs manualmente
-document.getElementById("mobilePdfInput").addEventListener("change", function(event) {
-    window.loadedPdfFiles = event.target.files;
-    alert(window.loadedPdfFiles.length + " PDFs carregados com sucesso!");
+/* MOBILE: CARREGAR PDFs */
+document.getElementById("mobilePdfInput").addEventListener("change", e => {
+  pdfFiles = Array.from(e.target.files).map(f => ({
+    name: f.name,
+    handle: f,
+    text: null
+  }));
+  renderPdfsSelectList();
 });
 
-// =========================
-// MODO DESKTOP: ESCOLHER PASTA
-// =========================
-document.getElementById("chooseFolderButton").addEventListener("click", async () => {
-    try {
-        const dirHandle = await window.showDirectoryPicker();
-        let txtFile = null;
-        let pdfFiles = [];
+/* DESKTOP: ESCOLHER PASTA */
+chooseFolderBtn.onclick = async () => {
+  try {
+    folderHandle = await window.showDirectoryPicker();
+    alert("Pasta selecionada!");
+  } catch (err) {
+    alert("Erro ao acessar a pasta.");
+  }
+};
 
-        for await (const entry of dirHandle.values()) {
-            if (entry.kind === "file") {
-                if (entry.name.toLowerCase().endsWith(".txt")) {
-                    txtFile = entry;
-                }
-                if (entry.name.toLowerCase().endsWith(".pdf")) {
-                    pdfFiles.push(entry);
-                }
-            }
-        }
+/* DESKTOP: CARREGAR TXT */
+loadKeywordsBtn.onclick = async () => {
+  if (!folderHandle) {
+    alert("Escolha a pasta primeiro.");
+    return;
+  }
 
-        if (!txtFile) {
-            alert("Nenhum arquivo TXT encontrado na pasta.");
-            return;
-        }
+  const perm = await folderHandle.requestPermission({ mode: "read" });
+  if (perm !== "granted") {
+    alert("Permissão negada.");
+    return;
+  }
 
-        const txtData = await txtFile.getFile();
-        window.loadedTxtContent = await txtData.text();
+  let txtHandle = null;
 
-        window.loadedPdfFiles = [];
-        for (const pdfEntry of pdfFiles) {
-            const pdfData = await pdfEntry.getFile();
-            window.loadedPdfFiles.push(pdfData);
-        }
-
-        alert("Arquivos carregados com sucesso!");
-    } catch (err) {
-        alert("Erro ao acessar a pasta.");
+  for await (const entry of folderHandle.values()) {
+    if (entry.kind === "file" && entry.name.toLowerCase().endsWith(".txt")) {
+      txtHandle = entry;
+      break;
     }
-});
+  }
 
-// =========================
-// INICIAR TESTE
-// =========================
-document.getElementById("startTestButton").addEventListener("click", () => {
-    if (!window.loadedTxtContent) {
-        alert("Nenhum TXT carregado.");
-        return;
+  if (!txtHandle) {
+    alert("Nenhum TXT encontrado.");
+    return;
+  }
+
+  const file = await txtHandle.getFile();
+  const raw = await file.text();
+
+  keywords = raw.split("\n").map(l => l.trim()).filter(l => l.length > 0);
+  usedKeywords = [];
+
+  keywordsInfoEl.textContent =
+    `Arquivo TXT: ${txtHandle.name} — ${keywords.length} termos carregados.`;
+
+  renderKeywords();
+};
+
+/* RENDERIZAR PALAVRAS */
+function renderKeywords() {
+  keywordsListEl.innerHTML = "";
+  keywords.forEach((kw, idx) => {
+    const div = document.createElement("div");
+    const usado = usedKeywords.includes(kw) ? " (já usado)" : "";
+    div.textContent = `${idx + 1}. ${kw}${usado}`;
+    keywordsListEl.appendChild(div);
+  });
+}
+
+/* DESKTOP: CARREGAR PDFs */
+loadPdfsBtn.onclick = async () => {
+  if (!folderHandle) {
+    alert("Escolha a pasta primeiro.");
+    return;
+  }
+
+  const perm = await folderHandle.requestPermission({ mode: "read" });
+  if (perm !== "granted") {
+    alert("Permissão negada.");
+    return;
+  }
+
+  pdfFiles = [];
+
+  for await (const entry of folderHandle.values()) {
+    if (entry.kind === "file" && entry.name.toLowerCase().endsWith(".pdf")) {
+      pdfFiles.push({ name: entry.name, handle: entry, text: null });
+    }
+  }
+
+  renderPdfsSelectList();
+};
+
+/* RENDERIZAR LISTA DE PDFs */
+function renderPdfsSelectList() {
+  pdfsSelectListEl.innerHTML = "";
+
+  pdfFiles.forEach((pdf, index) => {
+    const label = document.createElement("label");
+    const chk = document.createElement("input");
+    chk.type = "checkbox";
+    chk.value = index;
+    label.appendChild(chk);
+    label.appendChild(document.createTextNode(" " + pdf.name));
+    pdfsSelectListEl.appendChild(label);
+  });
+}
+
+/* EXTRAIR TEXTO PDF */
+async function extrairTextoDePdf(pdfObj) {
+  if (pdfObj.text !== null) return pdfObj.text;
+
+  const file = await pdfObj.handle.getFile();
+  const arrayBuffer = await file.arrayBuffer();
+
+  let textoFinal = "";
+
+  try {
+    const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+    const pdf = await loadingTask.promise;
+
+    let fullText = "";
+
+    for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+      const page = await pdf.getPage(pageNum);
+      const textContent = await page.getTextContent();
+      const strings = textContent.items.map(item => item.str);
+      fullText += strings.join(" ") + "\n";
     }
 
-    if (!window.loadedPdfFiles || window.loadedPdfFiles.length === 0) {
-        alert("Nenhum PDF carregado.");
-        return;
-    }
+    textoFinal = fullText.trim().length > 0 ? fullText : await extrairTextoPorOCR(file);
+  } catch (err) {
+    textoFinal = await extrairTextoPorOCR(file);
+  }
 
-    document.getElementById("output").innerHTML =
-        "<h3>Teste iniciado!</h3>" +
-        "<p>TXT carregado com " + window.loadedTxtContent.length + " caracteres.</p>" +
-        "<p>PDFs carregados: " + window.loadedPdfFiles.length + "</p>";
-});
+  pdfObj.text = textoFinal;
+  return textoFinal;
+}
+
+/* OCR */
+async function extrairTextoPorOCR(file) {
+  try {
+    const pdfData = await file.arrayBuffer();
+    const loadingTask = pdfjsLib.getDocument({ data: pdfData });
+    const pdf = await loadingTask.promise;
+    const page = await pdf.getPage(1);
+
+    const viewport = page.getViewport({ scale: 1.5 });
+    const canvas = document.createElement("canvas");
+    const context = canvas.getContext("2d");
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+
+    await page.render({ canvasContext: context, viewport }).promise;
+
+    const { data: { text } } = await Tesseract.recognize(canvas, 'por');
+
+    return text;
+  } catch (err) {
+    return "";
+  }
+}
+
+/* SORTEAR TERMO */
+startTestBtn.onclick = () => {
+  const selectedPdfIds = Array.from(
+    pdfsSelectListEl.querySelectorAll("input[type='checkbox']:checked")
+  ).map(cb => Number(cb.value));
+
+  if (selectedPdfIds.length === 0) {
+    alert("Selecione PDFs.");
+    return;
+  }
+
+  if (keywords.length === 0) {
+    alert("Carregue o TXT primeiro.");
+    return;
+  }
+
+  let disponiveis = keywords.filter(k => !usedKeywords.includes(k));
+
+  if (disponiveis.length === 0) {
+    usedKeywords = [];
+    disponiveis = [...keywords];
+  }
+
+  const termoEscolhido =
+    disponiveis[Math.floor(Math.random() * disponiveis.length)];
+
+  usedKeywords.push(termoEscolhido);
+
+  currentTest.active = true;
+  currentTest.keyword = termoEscolhido;
+  currentTest.pdfIds = selectedPdfIds;
+
+  showOccurrencesBtn.disabled = false;
+  endTestBtn.disabled = false;
+
+  testInfoEl.innerHTML =
+    `<p><strong>Teste iniciado</strong></p>
+     <p>Termo sorteado: <strong>${termoEscolhido}</strong></p>
+     <p>PDFs selecionados: ${selectedPdfIds.map(id => pdfFiles[id].name).join(", ")}</p>`;
+
+  renderKeywords();
+};
+
+/* TRECHOS */
+function extrairTrechos(texto, termo) {
+  const termoLower = termo.toLowerCase();
+  const textoLower = texto.toLowerCase();
+
+  const trechos = [];
+  let pos = 0;
+
+  while (true) {
+    const idx = textoLower.indexOf(termoLower, pos);
+    if (idx === -1) break;
+
+    const inicio = Math.max(0, idx - 80);
+    const fim = Math.min(texto.length, idx + termo.length + 80);
+
+    trechos.push(texto.substring(inicio, fim));
+    pos = idx + termo.length;
+  }
+
+  return trechos;
+}
+
+/* DESTACAR OCORRÊNCIAS */
+function highlightOccurrences(text, keywords) {
+  let result = text;
+  keywords.forEach(kw => {
+    const escaped = kw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const regex = new RegExp(escaped, "gi");
+    result = result.replace(regex, m => `<span class="highlight">${m}</span>`);
+  });
+  return result;
+}
+
+/* MOSTRAR OCORRÊNCIAS */
+showOccurrencesBtn.onclick = async () => {
+  if (!currentTest.active) {
+    alert("Nenhum teste ativo.");
+    return;
+  }
+
+  const termo = currentTest.keyword;
+  resultsEl.innerHTML = "<p>Processando PDFs...</p>";
+
+  let totalEncontrados = 0;
+  resultsEl.innerHTML = "";
+
+  for (const id of currentTest.pdfIds) {
+    const pdfObj = pdfFiles[id];
+    const texto = await extrairTextoDePdf(pdfObj);
+
+    if (!texto || texto.trim().length === 0) continue;
+
+    const trechos = extrairTrechos(texto, termo);
+
+    if (trechos.length > 0) {
+      totalEncontrados++;
+
+      const bloco = document.createElement("div");
+      bloco.className = "text-block";
+
+      let html = `<strong>${pdfObj.name}</strong><br><ul>`;
+
+      trechos.forEach(tr => {
+        html += `<li>${highlightOccurrences(tr, [termo])}</li>`;
+      });
+
+      html += "</ul>";
+
+      bloco.innerHTML = html;
+      resultsEl.appendChild(bloco);
+    }
+  }
+
+  if (totalEncontrados === 0) {
+    resultsEl.innerHTML =
+      `<p>Nenhum trecho contém o termo <strong>${termo}</strong>.</p>`;
+  }
+};
+
+/* ENCERRAR TESTE */
+endTestBtn.onclick = () => {
+  currentTest.active = false;
+  currentTest.keyword = "";
+  currentTest.pdfIds = [];
+
+  showOccurrencesBtn.disabled = true;
+  endTestBtn.disabled = true;
+
+  resultsEl.innerHTML = "<p>Teste encerrado.</p>";
+  testInfoEl.innerHTML = "";
+
+  pdfsSelectListEl.querySelectorAll("input[type='checkbox']").forEach(cb => {
+    cb.checked = false;
+  });
+};
+
+/* INICIALIZAÇÃO */
+keywords = [];
+usedKeywords = [];
+pdfFiles = [];
 </script>
-
 </body>
 </html>
