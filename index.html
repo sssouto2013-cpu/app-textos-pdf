@@ -164,19 +164,19 @@
     Modo Mobile (Android / iPhone)
   </h2>
 
-  <p>Selecione os arquivos diretamente do OneDrive, Google Drive ou armazenamento local.</p>
+  <p>Selecione arquivos do Google Drive, OneDrive ou armazenamento local.</p>
 
   <label for="mobileTxtInput" class="mobileButton">
     <span class="material-icons">description</span>
     Selecionar TXT manualmente
   </label>
-  <input type="file" id="mobileTxtInput" accept=".txt" style="display:none;">
+  <input type="file" id="mobileTxtInput" accept=".txt" capture="filesystem" style="display:none;">
 
   <label for="mobilePdfInput" class="mobileButton">
     <span class="material-icons">picture_as_pdf</span>
     Selecionar PDFs manualmente (múltiplos)
   </label>
-  <input type="file" id="mobilePdfInput" accept="application/pdf" multiple style="display:none;">
+  <input type="file" id="mobilePdfInput" accept="application/pdf" multiple capture="filesystem" style="display:none;">
 </div>
 
 <h1>Busca de Palavras em PDFs</h1>
@@ -245,9 +245,6 @@
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
 
 <script>
-/* ============================
-   DETECÇÃO MOBILE REAL
-   ============================ */
 function detectMobile() {
   if (navigator.maxTouchPoints > 1 && window.innerWidth < 900) return true;
   const ua = navigator.userAgent || navigator.vendor || window.opera;
@@ -256,9 +253,6 @@ function detectMobile() {
 
 const isMobile = detectMobile();
 
-/* ============================
-   VARIÁVEIS
-   ============================ */
 let folderHandle = null;
 let keywords = [];
 let usedKeywords = [];
@@ -269,7 +263,6 @@ const pdfjsLib = window['pdfjsLib'];
 pdfjsLib.GlobalWorkerOptions.workerSrc =
   'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
-/* ELEMENTOS */
 const chooseFolderBtn = document.getElementById("chooseFolderBtn");
 const loadKeywordsBtn = document.getElementById("loadKeywordsBtn");
 const loadPdfsBtn = document.getElementById("loadPdfsBtn");
@@ -284,9 +277,6 @@ const endTestBtn = document.getElementById("endTestBtn");
 const testInfoEl = document.getElementById("testInfo");
 const resultsEl = document.getElementById("results");
 
-/* ============================
-   MODO ESCURO
-   ============================ */
 const themeToggle = document.getElementById("themeToggle");
 if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
   document.body.dataset.theme = "dark";
@@ -296,9 +286,6 @@ themeToggle.onclick = () => {
     document.body.dataset.theme === "dark" ? "light" : "dark";
 };
 
-/* ============================
-   MOBILE: CARREGAR TXT
-   ============================ */
 if (isMobile) {
   document.getElementById("mobileSection").style.display = "block";
   chooseFolderBtn.style.display = "none";
@@ -315,17 +302,11 @@ document.getElementById("mobileTxtInput").addEventListener("change", async e => 
     .map(l => l.trim())
     .filter(l => l.length > 0)
     .flatMap(l => {
-
       if (l.toUpperCase().startsWith("#TITULO:")) return [];
-
       l = l.replace(/^#PALAVRAS:/i, "").trim();
-
       if (l.includes(";")) {
-        return l.split(";")
-                .map(t => t.trim())
-                .filter(t => t.length > 0);
+        return l.split(";").map(t => t.trim()).filter(t => t.length > 0);
       }
-
       return [l];
     });
 
@@ -337,9 +318,6 @@ document.getElementById("mobileTxtInput").addEventListener("change", async e => 
   renderKeywords();
 });
 
-/* ============================
-   MOBILE: CARREGAR PDFs
-   ============================ */
 document.getElementById("mobilePdfInput").addEventListener("change", e => {
   pdfFiles = Array.from(e.target.files).map(f => ({
     name: f.name,
@@ -349,9 +327,6 @@ document.getElementById("mobilePdfInput").addEventListener("change", e => {
   renderPdfsSelectList();
 });
 
-/* ============================
-   DESKTOP: ESCOLHER PASTA
-   ============================ */
 chooseFolderBtn.onclick = async () => {
   try {
     folderHandle = await window.showDirectoryPicker();
@@ -361,9 +336,6 @@ chooseFolderBtn.onclick = async () => {
   }
 };
 
-/* ============================
-   DESKTOP: CARREGAR TXT
-   ============================ */
 loadKeywordsBtn.onclick = async () => {
   if (!folderHandle) {
     alert("Escolha a pasta primeiro.");
@@ -398,17 +370,11 @@ loadKeywordsBtn.onclick = async () => {
     .map(l => l.trim())
     .filter(l => l.length > 0)
     .flatMap(l => {
-
       if (l.toUpperCase().startsWith("#TITULO:")) return [];
-
       l = l.replace(/^#PALAVRAS:/i, "").trim();
-
       if (l.includes(";")) {
-        return l.split(";")
-                .map(t => t.trim())
-                .filter(t => t.length > 0);
+        return l.split(";").map(t => t.trim()).filter(t => t.length > 0);
       }
-
       return [l];
     });
 
@@ -420,9 +386,6 @@ loadKeywordsBtn.onclick = async () => {
   renderKeywords();
 };
 
-/* ============================
-   RENDERIZAR PALAVRAS
-   ============================ */
 function renderKeywords() {
   keywordsListEl.innerHTML = "";
   keywords.forEach((kw, idx) => {
@@ -433,9 +396,6 @@ function renderKeywords() {
   });
 }
 
-/* ============================
-   DESKTOP: CARREGAR PDFs
-   ============================ */
 loadPdfsBtn.onclick = async () => {
   if (!folderHandle) {
     alert("Escolha a pasta primeiro.");
@@ -459,9 +419,6 @@ loadPdfsBtn.onclick = async () => {
   renderPdfsSelectList();
 };
 
-/* ============================
-   RENDERIZAR LISTA DE PDFs
-   ============================ */
 function renderPdfsSelectList() {
   pdfsSelectListEl.innerHTML = "";
 
@@ -476,9 +433,6 @@ function renderPdfsSelectList() {
   });
 }
 
-/* ============================
-   EXTRAIR TEXTO DE PDF
-   ============================ */
 async function extrairTextoDePdf(pdfObj) {
   if (pdfObj.text !== null) return pdfObj.text;
 
@@ -509,9 +463,6 @@ async function extrairTextoDePdf(pdfObj) {
   return textoFinal;
 }
 
-/* ============================
-   OCR (primeira página)
-   ============================ */
 async function extrairTextoPorOCR(file) {
   try {
     const pdfData = await file.arrayBuffer();
@@ -535,9 +486,6 @@ async function extrairTextoPorOCR(file) {
   }
 }
 
-/* ============================
-   SORTEAR TERMO
-   ============================ */
 startTestBtn.onclick = () => {
   const selectedPdfIds = Array.from(
     pdfsSelectListEl.querySelectorAll("input[type='checkbox']:checked")
@@ -560,7 +508,7 @@ startTestBtn.onclick = () => {
     disponiveis = [...keywords];
   }
 
-    const termoEscolhido =
+  const termoEscolhido =
     disponiveis[Math.floor(Math.random() * disponiveis.length)];
 
   usedKeywords.push(termoEscolhido);
@@ -580,9 +528,6 @@ startTestBtn.onclick = () => {
   renderKeywords();
 };
 
-/* ============================
-   EXTRAIR TRECHOS
-   ============================ */
 function extrairTrechos(texto, termo) {
   const termoLower = termo.toLowerCase();
   const textoLower = texto.toLowerCase();
@@ -592,7 +537,7 @@ function extrairTrechos(texto, termo) {
 
   while (true) {
     const idx = textoLower.indexOf(termoLower, pos);
-    if (idx === -1) break;
+    if (idx === -
 
     const inicio = Math.max(0, idx - 80);
     const fim = Math.min(texto.length, idx + termo.length + 80);
