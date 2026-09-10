@@ -305,14 +305,36 @@ document.getElementById("mobileTxtInput").addEventListener("change", async e => 
   if (!file) return;
 
   const raw = await file.text();
+
   keywords = raw
     .split("\n")
     .map(l => l.trim())
-    .filter(l => l.length > 0);
+    .filter(l => l.length > 0)
+    .flatMap(l => {
+      // ignora linhas de título
+      if (l.toUpperCase().startsWith("#TITULO:")) {
+        return [];
+      }
+
+      // remove prefixo #PALAVRAS:
+      l = l.replace(/^#PALAVRAS:/i, "").trim();
+
+      // separa por ponto e vírgula
+      if (l.includes(";")) {
+        return l
+          .split(";")
+          .map(t => t.trim())
+          .filter(t => t.length > 0);
+      }
+
+      return [l];
+    });
 
   usedKeywords = [];
 
-  keywordsInfoEl.textContent = `Arquivo TXT carregado — ${keywords.length} termos.`;
+  keywordsInfoEl.textContent =
+    `Arquivo TXT (mobile): ${file.name} — ${keywords.length} termos carregados.`;
+
   renderKeywords();
 });
 
