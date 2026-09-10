@@ -179,7 +179,11 @@
   <input type="file" id="mobilePdfInput" accept="application/pdf" multiple style="display:none;">
 </div>
 
-<h1>Busca de Palavras em PDFs
+<h1>Busca de Palavras em PDFs</h1>
+
+<button id="themeToggle">
+  <span class="material-icons">dark_mode</span>
+</button>
 
 <div class="panel">
   <h2><span class="material-icons">folder_open</span> Pasta de trabalho</h2>
@@ -311,20 +315,15 @@ document.getElementById("mobileTxtInput").addEventListener("change", async e => 
     .map(l => l.trim())
     .filter(l => l.length > 0)
     .flatMap(l => {
-      // ignora linhas de título
-      if (l.toUpperCase().startsWith("#TITULO:")) {
-        return [];
-      }
 
-      // remove prefixo #PALAVRAS:
+      if (l.toUpperCase().startsWith("#TITULO:")) return [];
+
       l = l.replace(/^#PALAVRAS:/i, "").trim();
 
-      // separa por ponto e vírgula
       if (l.includes(";")) {
-        return l
-          .split(";")
-          .map(t => t.trim())
-          .filter(t => t.length > 0);
+        return l.split(";")
+                .map(t => t.trim())
+                .filter(t => t.length > 0);
       }
 
       return [l];
@@ -399,11 +398,17 @@ loadKeywordsBtn.onclick = async () => {
     .map(l => l.trim())
     .filter(l => l.length > 0)
     .flatMap(l => {
+
       if (l.toUpperCase().startsWith("#TITULO:")) return [];
+
       l = l.replace(/^#PALAVRAS:/i, "").trim();
+
       if (l.includes(";")) {
-        return l.split(";").map(t => t.trim()).filter(t => t.length > 0);
+        return l.split(";")
+                .map(t => t.trim())
+                .filter(t => t.length > 0);
       }
+
       return [l];
     });
 
@@ -555,7 +560,7 @@ startTestBtn.onclick = () => {
     disponiveis = [...keywords];
   }
 
-  const termoEscolhido =
+    const termoEscolhido =
     disponiveis[Math.floor(Math.random() * disponiveis.length)];
 
   usedKeywords.push(termoEscolhido);
