@@ -55,17 +55,6 @@
     animation: fadeIn 0.4s ease;
   }
 
-  textarea, input[type="text"], select {
-    width: 100%;
-    padding: 12px;
-    border-radius: 10px;
-    border: 1px solid var(--border);
-    margin-bottom: 12px;
-    background: var(--panel);
-    color: var(--text);
-    transition: 0.3s;
-  }
-
   button {
     background: var(--accent);
     color: white;
@@ -156,7 +145,7 @@
 <body>
 
 <!-- ========================= -->
-<!-- 📱 MODO MOBILE NO TOPO ABSOLUTO -->
+<!-- 📱 MODO MOBILE (AVANÇADO) -->
 <!-- ========================= -->
 <div id="mobileSection">
   <h2 style="margin-top: 0; display:flex; align-items:center; gap:8px;">
@@ -164,19 +153,17 @@
     Modo Mobile (Android / iPhone)
   </h2>
 
-  <p>Selecione arquivos do Google Drive, OneDrive ou armazenamento local.</p>
+  <p>Selecione arquivos diretamente do Google Drive, OneDrive ou armazenamento local.</p>
 
-  <label for="mobileTxtInput" class="mobileButton">
+  <button id="pickTxtAdvanced" class="mobileButton">
     <span class="material-icons">description</span>
-    Selecionar TXT manualmente
-  </label>
-  <input type="file" id="mobileTxtInput" accept=".txt" capture="filesystem" style="display:none;">
+    Selecionar TXT (modo avançado)
+  </button>
 
-  <label for="mobilePdfInput" class="mobileButton">
+  <button id="pickPdfAdvanced" class="mobileButton">
     <span class="material-icons">picture_as_pdf</span>
-    Selecionar PDFs manualmente (múltiplos)
-  </label>
-  <input type="file" id="mobilePdfInput" accept="application/pdf" multiple capture="filesystem" style="display:none;">
+    Selecionar PDFs (modo avançado)
+  </button>
 </div>
 
 <h1>Busca de Palavras em PDFs</h1>
@@ -186,7 +173,7 @@
 </button>
 
 <div class="panel">
-  <h2><span class="material-icons">folder_open</span> Pasta de trabalho</h2>
+  <h2><span class="material-icons">folder_open</span> Pasta de trabalho (desktop)</h2>
 
   <p>Escolha a pasta onde estão:</p>
   <ul>
@@ -203,7 +190,7 @@
   <h2><span class="material-icons">description</span> Palavras‑chave (arquivo TXT)</h2>
 
   <button id="loadKeywordsBtn">
-    <span class="material-icons">text_snippet</span> Carregar TXT de palavras‑chave
+    <span class="material-icons">text_snippet</span> Carregar TXT de palavras‑chave (desktop)
   </button>
 
   <p id="keywordsInfo">Nenhum arquivo TXT carregado.</p>
@@ -216,7 +203,7 @@
   <h2><span class="material-icons">picture_as_pdf</span> PDFs para busca</h2>
 
   <button id="loadPdfsBtn">
-    <span class="material-icons">download</span> Carregar PDFs da pasta
+    <span class="material-icons">download</span> Carregar PDFs da pasta (desktop)
   </button>
 
   <h3>Escolher PDFs</h3>
@@ -286,47 +273,85 @@ themeToggle.onclick = () => {
     document.body.dataset.theme === "dark" ? "light" : "dark";
 };
 
+/* ============================
+   MOBILE: MODO AVANÇADO (SAF)
+   ============================ */
 if (isMobile) {
   document.getElementById("mobileSection").style.display = "block";
   chooseFolderBtn.style.display = "none";
 }
 
-document.getElementById("mobileTxtInput").addEventListener("change", async e => {
-  const file = e.target.files[0];
-  if (!file) return;
-
-  const raw = await file.text();
-
-  keywords = raw
-    .split("\n")
-    .map(l => l.trim())
-    .filter(l => l.length > 0)
-    .flatMap(l => {
-      if (l.toUpperCase().startsWith("#TITULO:")) return [];
-      l = l.replace(/^#PALAVRAS:/i, "").trim();
-      if (l.includes(";")) {
-        return l.split(";").map(t => t.trim()).filter(t => t.length > 0);
-      }
-      return [l];
+/* TXT via SAF */
+document.getElementById("pickTxtAdvanced").onclick = async () => {
+  try {
+    const [fileHandle] = await window.showOpenFilePicker({
+      multiple: false,
+      types: [{
+        description: "Arquivo TXT",
+        accept: { "text/plain": [".txt"] }
+      }]
     });
 
-  usedKeywords = [];
+    const file = await fileHandle.getFile();
+    const raw = await file.text();
 
-  keywordsInfoEl.textContent =
-    `Arquivo TXT (mobile): ${file.name} — ${keywords.length} termos carregados.`;
+    keywords = raw
+      .split("\n")
+      .map(l => l.trim())
+      .filter(l => l.length > 0)
+      .flatMap(l => {
+        if (l.toUpperCase().startsWith("#TITULO:")) return [];
+        l = l.replace(/^#PALAVRAS:/i, "").trim();
+        if (l.includes(";")) {
+          return l.split(";").map(t => t.trim()).filter(t => t.length > 0);
+        }
+        return [l];
+      });
 
-  renderKeywords();
-});
+    usedKeywords = [];
 
-document.getElementById("mobilePdfInput").addEventListener("change", e => {
-  pdfFiles = Array.from(e.target.files).map(f => ({
-    name: f.name,
-    handle: f,
-    text: null
-  }));
-  renderPdfsSelectList();
-});
+    keywordsInfoEl.textContent =
+      `Arquivo TXT (mobile): ${file.name} — ${keywords.length} termos carregados.`;
 
+    renderKeywords();
+
+  } catch (err) {
+    console.log("Cancelado ou não suportado:", err);
+  }
+};
+
+/* PDFs via SAF */
+document.getElementById("pickPdfAdvanced").onclick = async () => {
+  try {
+    const fileHandles = await window.showOpenFilePicker({
+      multiple: true,
+      types: [{
+        description: "Arquivos PDF",
+        accept: { "application/pdf": [".pdf"] }
+      }]
+    });
+
+    pdfFiles = [];
+
+    for (const handle of fileHandles) {
+      const file = await handle.getFile();
+      pdfFiles.push({
+        name: file.name,
+        handle: handle,
+        text: null
+      });
+    }
+
+    renderPdfsSelectList();
+
+  } catch (err) {
+    console.log("Cancelado ou não suportado:", err);
+  }
+};
+
+/* ============================
+   DESKTOP: ESCOLHER PASTA
+   ============================ */
 chooseFolderBtn.onclick = async () => {
   try {
     folderHandle = await window.showDirectoryPicker();
@@ -336,6 +361,9 @@ chooseFolderBtn.onclick = async () => {
   }
 };
 
+/* ============================
+   DESKTOP: CARREGAR TXT
+   ============================ */
 loadKeywordsBtn.onclick = async () => {
   if (!folderHandle) {
     alert("Escolha a pasta primeiro.");
@@ -386,6 +414,9 @@ loadKeywordsBtn.onclick = async () => {
   renderKeywords();
 };
 
+/* ============================
+   RENDERIZAR PALAVRAS
+   ============================ */
 function renderKeywords() {
   keywordsListEl.innerHTML = "";
   keywords.forEach((kw, idx) => {
@@ -396,6 +427,9 @@ function renderKeywords() {
   });
 }
 
+/* ============================
+   DESKTOP: CARREGAR PDFs
+   ============================ */
 loadPdfsBtn.onclick = async () => {
   if (!folderHandle) {
     alert("Escolha a pasta primeiro.");
@@ -419,6 +453,9 @@ loadPdfsBtn.onclick = async () => {
   renderPdfsSelectList();
 };
 
+/* ============================
+   RENDERIZAR LISTA DE PDFs
+   ============================ */
 function renderPdfsSelectList() {
   pdfsSelectListEl.innerHTML = "";
 
@@ -433,6 +470,9 @@ function renderPdfsSelectList() {
   });
 }
 
+/* ============================
+   EXTRAIR TEXTO DE PDF
+   ============================ */
 async function extrairTextoDePdf(pdfObj) {
   if (pdfObj.text !== null) return pdfObj.text;
 
@@ -463,6 +503,9 @@ async function extrairTextoDePdf(pdfObj) {
   return textoFinal;
 }
 
+/* ============================
+   OCR (primeira página)
+   ============================ */
 async function extrairTextoPorOCR(file) {
   try {
     const pdfData = await file.arrayBuffer();
@@ -486,6 +529,9 @@ async function extrairTextoPorOCR(file) {
   }
 }
 
+/* ============================
+   SORTEAR TERMO
+   ============================ */
 startTestBtn.onclick = () => {
   const selectedPdfIds = Array.from(
     pdfsSelectListEl.querySelectorAll("input[type='checkbox']:checked")
@@ -528,6 +574,9 @@ startTestBtn.onclick = () => {
   renderKeywords();
 };
 
+/* ============================
+   EXTRAIR TRECHOS
+   ============================ */
 function extrairTrechos(texto, termo) {
   const termoLower = termo.toLowerCase();
   const textoLower = texto.toLowerCase();
