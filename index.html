@@ -115,57 +115,10 @@
     from { opacity: 0; transform: translateY(10px); }
     to { opacity: 1; transform: translateY(0); }
   }
-
-  /* MODO MOBILE AZUL */
-  #mobileSection {
-    display: none;
-    padding: 16px;
-    border-radius: 14px;
-    background: #e7f1ff;
-    border: 1px solid #bcd4ff;
-    margin-bottom: 20px;
-    box-shadow: var(--shadow);
-  }
-
-  .mobileButton {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: #ffffff;
-    border: 1px solid #bcd4ff;
-    padding: 10px 14px;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 16px;
-    margin-bottom: 10px;
-  }
 </style>
 </head>
 
 <body>
-
-<!-- ========================= -->
-<!-- 📱 MODO MOBILE (AVANÇADO) -->
-<!-- ========================= -->
-<div id="mobileSection">
-  <h2 style="margin-top: 0; display:flex; align-items:center; gap:8px;">
-    <span class="material-icons">smartphone</span>
-    Modo Mobile (Android / iPhone)
-  </h2>
-
-  <p>Selecione arquivos diretamente do Google Drive, OneDrive ou armazenamento local.</p>
-
-  <button id="pickTxtAdvanced" class="mobileButton">
-    <span class="material-icons">description</span>
-    Selecionar TXT (modo avançado)
-  </button>
-
-  <button id="pickPdfAdvanced" class="mobileButton">
-    <span class="material-icons">picture_as_pdf</span>
-    Selecionar PDFs (modo avançado)
-  </button>
-</div>
-
 <h1>Busca de Palavras em PDFs</h1>
 
 <button id="themeToggle">
@@ -173,13 +126,17 @@
 </button>
 
 <div class="panel">
-  <h2><span class="material-icons">folder_open</span> Pasta de trabalho (desktop)</h2>
+  <h2><span class="material-icons">folder_open</span> Pasta de trabalho (OneDrive sincronizado)</h2>
 
   <p>Escolha a pasta onde estão:</p>
   <ul>
     <li>um arquivo <strong>.txt</strong> com palavras‑chave</li>
     <li>vários arquivos <strong>.pdf</strong> onde será feita a busca</li>
   </ul>
+
+  <p style="font-size:14px; color:#555;">
+    No Android, selecione a pasta sincronizada pelo FolderSync (ex.: <em>/storage/emulated/0/FolderSync/OneDrive/...</em>).
+  </p>
 
   <button id="chooseFolderBtn">
     <span class="material-icons">folder</span> Escolher pasta
@@ -190,7 +147,7 @@
   <h2><span class="material-icons">description</span> Palavras‑chave (arquivo TXT)</h2>
 
   <button id="loadKeywordsBtn">
-    <span class="material-icons">text_snippet</span> Carregar TXT de palavras‑chave (desktop)
+    <span class="material-icons">text_snippet</span> Carregar TXT de palavras‑chave
   </button>
 
   <p id="keywordsInfo">Nenhum arquivo TXT carregado.</p>
@@ -203,7 +160,7 @@
   <h2><span class="material-icons">picture_as_pdf</span> PDFs para busca</h2>
 
   <button id="loadPdfsBtn">
-    <span class="material-icons">download</span> Carregar PDFs da pasta (desktop)
+    <span class="material-icons">download</span> Carregar PDFs da pasta
   </button>
 
   <h3>Escolher PDFs</h3>
@@ -228,18 +185,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"></script>
 
-<!-- Tesseract.js -->
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
-
 <script>
-function detectMobile() {
-  if (navigator.maxTouchPoints > 1 && window.innerWidth < 900) return true;
-  const ua = navigator.userAgent || navigator.vendor || window.opera;
-  return /android|iphone|ipad|ipod/i.test(ua);
-}
-
-const isMobile = detectMobile();
-
 let folderHandle = null;
 let keywords = [];
 let usedKeywords = [];
@@ -273,97 +219,18 @@ themeToggle.onclick = () => {
     document.body.dataset.theme === "dark" ? "light" : "dark";
 };
 
-/* ============================
-   MOBILE: MODO AVANÇADO (SAF)
-   ============================ */
-if (isMobile) {
-  document.getElementById("mobileSection").style.display = "block";
-  chooseFolderBtn.style.display = "none";
-}
-
-/* TXT via SAF */
-document.getElementById("pickTxtAdvanced").onclick = async () => {
-  try {
-    const [fileHandle] = await window.showOpenFilePicker({
-      multiple: false,
-      types: [{
-        description: "Arquivo TXT",
-        accept: { "text/plain": [".txt"] }
-      }]
-    });
-
-    const file = await fileHandle.getFile();
-    const raw = await file.text();
-
-    keywords = raw
-      .split("\n")
-      .map(l => l.trim())
-      .filter(l => l.length > 0)
-      .flatMap(l => {
-        if (l.toUpperCase().startsWith("#TITULO:")) return [];
-        l = l.replace(/^#PALAVRAS:/i, "").trim();
-        if (l.includes(";")) {
-          return l.split(";").map(t => t.trim()).filter(t => t.length > 0);
-        }
-        return [l];
-      });
-
-    usedKeywords = [];
-
-    keywordsInfoEl.textContent =
-      `Arquivo TXT (mobile): ${file.name} — ${keywords.length} termos carregados.`;
-
-    renderKeywords();
-
-  } catch (err) {
-    console.log("Cancelado ou não suportado:", err);
-  }
-};
-
-/* PDFs via SAF */
-document.getElementById("pickPdfAdvanced").onclick = async () => {
-  try {
-    const fileHandles = await window.showOpenFilePicker({
-      multiple: true,
-      types: [{
-        description: "Arquivos PDF",
-        accept: { "application/pdf": [".pdf"] }
-      }]
-    });
-
-    pdfFiles = [];
-
-    for (const handle of fileHandles) {
-      const file = await handle.getFile();
-      pdfFiles.push({
-        name: file.name,
-        handle: handle,
-        text: null
-      });
-    }
-
-    renderPdfsSelectList();
-
-  } catch (err) {
-    console.log("Cancelado ou não suportado:", err);
-  }
-};
-
-/* ============================
-   DESKTOP: ESCOLHER PASTA
-   ============================ */
+/* ESCOLHER PASTA (desktop + Android com FolderSync) */
 chooseFolderBtn.onclick = async () => {
   try {
     folderHandle = await window.showDirectoryPicker();
     alert("Pasta selecionada!");
   } catch (err) {
     alert("Erro ao acessar a pasta.");
+    console.error(err);
   }
 };
 
-/* ============================
-   DESKTOP: CARREGAR TXT
-   ============================ */
+/* CARREGAR TXT */
 loadKeywordsBtn.onclick = async () => {
   if (!folderHandle) {
     alert("Escolha a pasta primeiro.");
@@ -386,7 +253,7 @@ loadKeywordsBtn.onclick = async () => {
   }
 
   if (!txtHandle) {
-    alert("Nenhum TXT encontrado.");
+    alert("Nenhum TXT encontrado na pasta.");
     return;
   }
 
@@ -414,9 +281,7 @@ loadKeywordsBtn.onclick = async () => {
   renderKeywords();
 };
 
-/* ============================
-   RENDERIZAR PALAVRAS
-   ============================ */
+/* LISTAR PALAVRAS */
 function renderKeywords() {
   keywordsListEl.innerHTML = "";
   keywords.forEach((kw, idx) => {
@@ -427,9 +292,7 @@ function renderKeywords() {
   });
 }
 
-/* ============================
-   DESKTOP: CARREGAR PDFs
-   ============================ */
+/* CARREGAR PDFs */
 loadPdfsBtn.onclick = async () => {
   if (!folderHandle) {
     alert("Escolha a pasta primeiro.");
@@ -450,12 +313,14 @@ loadPdfsBtn.onclick = async () => {
     }
   }
 
+  if (pdfFiles.length === 0) {
+    alert("Nenhum PDF encontrado na pasta.");
+  }
+
   renderPdfsSelectList();
 };
 
-/* ============================
-   RENDERIZAR LISTA DE PDFs
-   ============================ */
+/* LISTAR PDFs */
 function renderPdfsSelectList() {
   pdfsSelectListEl.innerHTML = "";
 
@@ -470,9 +335,7 @@ function renderPdfsSelectList() {
   });
 }
 
-/* ============================
-   EXTRAIR TEXTO DE PDF
-   ============================ */
+/* EXTRAIR TEXTO DE PDF */
 async function extrairTextoDePdf(pdfObj) {
   if (pdfObj.text !== null) return pdfObj.text;
 
@@ -494,44 +357,17 @@ async function extrairTextoDePdf(pdfObj) {
       fullText += strings.join(" ") + "\n";
     }
 
-    textoFinal = fullText.trim().length > 0 ? fullText : await extrairTextoPorOCR(file);
+    textoFinal = fullText.trim().length > 0 ? fullText : "";
   } catch (err) {
-    textoFinal = await extrairTextoPorOCR(file);
+    console.error("Erro ao ler PDF:", err);
+    textoFinal = "";
   }
 
   pdfObj.text = textoFinal;
   return textoFinal;
 }
 
-/* ============================
-   OCR (primeira página)
-   ============================ */
-async function extrairTextoPorOCR(file) {
-  try {
-    const pdfData = await file.arrayBuffer();
-    const loadingTask = pdfjsLib.getDocument({ data: pdfData });
-    const pdf = await loadingTask.promise;
-    const page = await pdf.getPage(1);
-
-    const viewport = page.getViewport({ scale: 1.5 });
-    const canvas = document.createElement("canvas");
-    const context = canvas.getContext("2d");
-    canvas.width = viewport.width;
-    canvas.height = viewport.height;
-
-    await page.render({ canvasContext: context, viewport }).promise;
-
-    const { data: { text } } = await Tesseract.recognize(canvas, 'por');
-
-    return text;
-  } catch (err) {
-    return "";
-  }
-}
-
-/* ============================
-   SORTEAR TERMO
-   ============================ */
+/* SORTEAR TERMO */
 startTestBtn.onclick = () => {
   const selectedPdfIds = Array.from(
     pdfsSelectListEl.querySelectorAll("input[type='checkbox']:checked")
@@ -574,9 +410,7 @@ startTestBtn.onclick = () => {
   renderKeywords();
 };
 
-/* ============================
-   EXTRAIR TRECHOS
-   ============================ */
+/* EXTRAIR TRECHOS */
 function extrairTrechos(texto, termo) {
   const termoLower = termo.toLowerCase();
   const textoLower = texto.toLowerCase();
@@ -598,9 +432,7 @@ function extrairTrechos(texto, termo) {
   return trechos;
 }
 
-/* ============================
-   DESTACAR OCORRÊNCIAS
-   ============================ */
+/* DESTACAR OCORRÊNCIAS */
 function highlightOccurrences(text, keywords) {
   let result = text;
   keywords.forEach(kw => {
@@ -611,9 +443,7 @@ function highlightOccurrences(text, keywords) {
   return result;
 }
 
-/* ============================
-   MOSTRAR OCORRÊNCIAS
-   ============================ */
+/* MOSTRAR OCORRÊNCIAS */
 showOccurrencesBtn.onclick = async () => {
   if (!currentTest.active) {
     alert("Nenhum teste ativo.");
@@ -659,9 +489,7 @@ showOccurrencesBtn.onclick = async () => {
   }
 };
 
-/* ============================
-   ENCERRAR TESTE
-   ============================ */
+/* ENCERRAR TESTE */
 endTestBtn.onclick = () => {
   currentTest.active = false;
   currentTest.keyword = "";
@@ -678,9 +506,7 @@ endTestBtn.onclick = () => {
   });
 };
 
-/* ============================
-   INICIALIZAÇÃO
-   ============================ */
+/* INICIALIZAÇÃO */
 keywords = [];
 usedKeywords = [];
 pdfFiles = [];
